@@ -3,10 +3,10 @@ import { User } from "../models/User";
 
 export class UserController {
   async getAll(request: Context) {
-    const users = await User.fetchAll();
+    const users = await User.fetchAll({ withRelated: ['role'] });
     return Response.json({
       status: 200,
-      message: "Berhasil mengambil data user",
+      message: "Berhasil mengambil data user beserta role",
       data: users.toJSON(),
     });
   }
@@ -14,7 +14,7 @@ export class UserController {
   async actionUser(request: Context) {
     try {
       const body = await request.req.json();
-      const id = body.id ?? null; 
+      const id = body.id ?? null;
 
       if (id) {
         const user = await User.where({ id }).fetch({ require: false });
