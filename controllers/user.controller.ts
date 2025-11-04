@@ -1,32 +1,68 @@
+import type { Context } from "hono";
 import { User } from "../models/User";
 
-export const getAllUsers = async (response : any)  => {
-  const users = await User.fetchAll();
-  return response.json(users.toJSON());
-};
+export class UserController {
+  async getAll(request: Context) {
+    const users = await User.fetchAll();
+    return Response.json({
+      status: 200,
+      message: "Berhasil mengambil data user",
+      data: users.toJSON(),
+    });
+  }
 
-export const createUser = async (c) => {
-  const body = await c.req.json();
-  const user = await new User(body).save();
-  return c.json(user.toJSON(), 201);
-};
+  async actionUser(request: Context) {
+    try {
+      const body = await request.req.json();
+      const id = body.id ?? null; 
 
-export const updateUser = async (c) => {
-  const { id } = c.req.param();
-  const data = await c.req.json();
+      if (id) {
+        const user = await User.where({ id }).fetch({ require: false });
+        if (!user) {
+          return Response.json({
+            status: 404,
+            message: "User tidak ditemukan",
+          });
+        }
 
-  const user = await User.where({ id }).fetch({ require: false });
-  if (!user) return c.json({ error: "User not found" }, 404);
+        await user.save(body, { patch: true });
+        return Response.json({
+          status: 200,
+          message: "User berhasil diperbarui",
+          data: user.toJSON(),
+        });
+      } else {
+        const newUser = await new User(body).save();
+        return Response.json({
+          status: 201,
+          message: "User berhasil dibuat",
+          data: newUser.toJSON(),
+        });
+      }
+    } catch (error: any) {
+      return Response.json({
+        status: 500,
+        message: "Terjadi kesalahan pada server",
+        error: error.message,
+      });
+    }
+  }
 
-  await user.save(data, { patch: true });
-  return c.json(user.toJSON());
-};
+  async deleteUser(request: Context) {
+    const { id } = request.req.param();
+    const user = await User.where({ id }).fetch({ require: false });
 
-export const deleteUser = async (c) => {
-  const { id } = c.req.param();
-  const user = await User.where({ id }).fetch({ require: false });
-  if (!user) return c.json({ error: "User not found" }, 404);
+    if (!user) {
+      return Response.json({
+        status: 404,
+        message: "User tidak ditemukan",
+      });
+    }
 
-  await user.destroy();
-  return c.json({ message: "User deleted successfully" });
-};
+    await user.destroy();
+    return Response.json({
+      status: 200,
+      message: "User berhasil dihapus",
+    });
+  }
+}
